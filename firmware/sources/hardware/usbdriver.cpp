@@ -15,6 +15,20 @@
 #include "tusb.h"
 #include "interface/kbdcodes.h"
 
+#include "interface/console.h"
+#include <string>
+
+void binary_to_string(const unsigned char* source, unsigned int length, std::string& destination)
+{
+    destination.clear();
+    for(unsigned int i = 0; i < length; i++)
+    {
+        char digit[3];
+        sprintf(digit, "%02x", source[i]);
+        destination.append(digit);
+    }
+}
+
 // ***************************************************************************************
 //
 //                          Process USB HID Keyboard Report
@@ -54,20 +68,42 @@ static void usbProcessReport(uint8_t const *report) {
 // ***************************************************************************************
 
 void tuh_hid_mount_cb(uint8_t dev_addr, uint8_t instance, uint8_t const* desc_report, uint16_t desc_len) {
- 
+	CONWriteString("Added USB device:");
+	CONWriteHex(dev_addr);
+	CONWriteHex(instance);
 	switch(tuh_hid_interface_protocol(dev_addr, instance)) {
 
 		case HID_ITF_PROTOCOL_KEYBOARD:
+			CONWriteString(" Keyboard");
 			tuh_hid_receive_report(dev_addr, instance);
 		break;
 
 		case HID_ITF_PROTOCOL_MOUSE:
+			CONWriteString(" Mouse");
+			tuh_hid_receive_report(dev_addr, instance);
+		break;
+
+		case HID_ITF_PROTOCOL_NONE:
+			CONWriteString("Gamepad? Decriptor:");
+			std::string desc;
+			binary_to_string(desc_report, desc_len, desc);
+			CONWriteString(desc.c_str());
+			CONWriteString("\r");
 			tuh_hid_receive_report(dev_addr, instance);
 		break;
 	}
+	uint16_t vid, pid;
+  	tuh_vid_pid_get(dev_addr, &vid, &pid);
+	CONWriteHex(vid);
+	CONWriteHex(pid);
+	CONWrite('\r');
 }
 
 void tuh_hid_umount_cb(uint8_t dev_addr, uint8_t instance) {
+	CONWriteString("Removed USB device:");
+	CONWriteHex(dev_addr);
+	CONWriteHex(instance);
+	CONWrite('\r');
 }
 
 void tuh_hid_report_received_cb(uint8_t dev_addr, uint8_t instance, uint8_t const* report, uint16_t len) {
@@ -81,7 +117,34 @@ void tuh_hid_report_received_cb(uint8_t dev_addr, uint8_t instance, uint8_t cons
 	
 	case HID_ITF_PROTOCOL_MOUSE:
 	  tuh_hid_receive_report(dev_addr, instance);
+	  CONWriteHex(dev_addr);
+	  CONWriteHex(instance);
+	  for(int i = 0; i < len; i++)
+	  {
+		CONWriteHex(report[i]);
+	  }
+	  CONWrite('\r');
 	  tuh_hid_receive_report(dev_addr, instance);
+	break;
+
+	case HID_ITF_PROTOCOL_NONE:
+	{
+		tuh_hid_receive_report(dev_addr, instance);
+		if(report[0] != 0 || report[1] != 20)
+		{
+			CONWriteHex(dev_addr);
+			CONWriteHex(instance);
+			for(int i = 0; i < len; i++)
+			{
+				CONWriteHex(report[i]);
+			}
+			CONWrite('\r');
+		}
+		tuh_hid_receive_report(dev_addr, instance);
+	}
+	break;
+	default:
+		CONWriteString("Something default.\r");
 	break;
   }
 }
