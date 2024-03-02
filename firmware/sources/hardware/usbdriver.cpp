@@ -15,8 +15,17 @@
 #include "tusb.h"
 #include "interface/kbdcodes.h"
 
+#include "gamepad_controller.h"
+
 #include "interface/console.h"
 #include <string>
+#include <vector>
+#include <cstdint>
+#include <optional>
+#include <utility>
+#include <unordered_map>
+#include <bitset>
+#include <ranges>
 
 void binary_to_string(const unsigned char* source, unsigned int length, std::string& destination)
 {
@@ -67,6 +76,8 @@ static void usbProcessReport(uint8_t const *report) {
 //
 // ***************************************************************************************
 
+static GamepadController gamepad_controller;
+
 void tuh_hid_mount_cb(uint8_t dev_addr, uint8_t instance, uint8_t const* desc_report, uint16_t desc_len) {
 	CONWriteString("Added USB device:");
 	CONWriteHex(dev_addr);
@@ -89,6 +100,7 @@ void tuh_hid_mount_cb(uint8_t dev_addr, uint8_t instance, uint8_t const* desc_re
 			binary_to_string(desc_report, desc_len, desc);
 			CONWriteString(desc.c_str());
 			CONWriteString("\r");
+			gamepad_controller.add(dev_addr, instance, desc_report, desc_len);
 			tuh_hid_receive_report(dev_addr, instance);
 		break;
 	}
@@ -130,16 +142,66 @@ void tuh_hid_report_received_cb(uint8_t dev_addr, uint8_t instance, uint8_t cons
 	case HID_ITF_PROTOCOL_NONE:
 	{
 		tuh_hid_receive_report(dev_addr, instance);
-		if(report[0] != 0 || report[1] != 20)
-		{
-			CONWriteHex(dev_addr);
-			CONWriteHex(instance);
-			for(int i = 0; i < len; i++)
-			{
-				CONWriteHex(report[i]);
-			}
-			CONWrite('\r');
-		}
+		//CONWriteHex(dev_addr);
+		//CONWriteHex(instance);
+		//CONWrite(':');
+
+		// struct gamepad_state
+		// {
+		// 	std::vector<uint8_t> default_state;
+		// 	std::vector<uint8_t> state;
+		// 	std::unordered_map<uint16_t, uint16_t> mapping;
+		// };
+
+		// static gamepad_state state;
+
+		// if(state.default_state.empty())
+		// {
+		// 	state.default_state = std::vector<uint8_t>(report, report + len);
+		// 	CONWriteString("Found new gamepad, default state saved\r");
+		// 	CONWriteString("Needs button mapping!\r");
+		// }
+
+		// auto getFirstDiff = [](uint8_t const* report, uint16_t len, const std::vector<uint8_t> &default_state) -> std::optional<uint16_t>
+		// {
+			//auto current_string = std::bitset<16>(*(uint16_t*)report).to_string();
+			// auto default_string = std::bitset<16>(*(uint16_t*)default_state.data()).to_string();
+			// std::string diff_string;
+
+			// for (const auto [c,d] : std::views::zip(current_string, default_string))
+			// {
+			// 	diff_string += c != d ? c : ' ';
+			// }
+
+			// CONWriteString(("DEFAULT: " + default_string + "\r").c_str());
+			//CONWriteString(("CURRENT: " + current_string + "\r").c_str());
+			// CONWriteString(("DIFF   : " + diff_string + "\r").c_str());
+
+
+		// 	for(uint16_t i = 0; i < len; i++)
+		// 	{
+		// 		for(uint8_t b=0; b<8; b++)
+		// 		{
+		// 			bool current_bit = (report[i] >> b & 0x1);
+		// 			bool default_bit = (default_state[i] >> b & 0x1);
+		// 			if(current_bit != default_bit)
+		// 			{
+		// 				uint16_t mapping = (i << 8) | b;
+		// 				std::string output = "Byte " + std::to_string(i) + " bit " + std::to_string(b) + ":" + std::to_string(current_bit) + "\r";
+		// 				CONWriteString(output.c_str());
+		// 				return mapping;
+		// 			}
+		// 		}
+		// 	}
+
+		// 	return std::nullopt;
+		// };
+
+
+
+		// CONWrite('\r');
+		// sleep_ms(100);
+		gamepad_controller.update(dev_addr, instance, report, len);
 		tuh_hid_receive_report(dev_addr, instance);
 	}
 	break;
