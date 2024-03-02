@@ -30,6 +30,31 @@ struct Gamepad
 class GamepadController
 {
     public:
+        uint8_t getState()
+        {
+            uint8_t state = 0;
+
+            for(auto &gamepad : gamepads)
+            {
+                if(gamepad.button_count >= 2)
+                {
+                    if(gamepad.buttons[0]) state |= 0x10;
+                    if(gamepad.buttons[1]) state |= 0x20;
+                }
+
+                if(gamepad.dpad_available)
+                {
+                    if(gamepad.dpad_x == 0) state |= 0x1;
+                    if(gamepad.dpad_x == 2) state |= 0x2;
+
+                    if(gamepad.dpad_y == 0) state |= 0x04;
+                    if(gamepad.dpad_y == 2) state |= 0x08;
+                }
+            }
+
+            return state;
+        };
+
         bool update(uint8_t dev_addr, uint8_t instance, uint8_t const* report, uint16_t len)
         {
             for(auto &gamepad : gamepads)
@@ -58,7 +83,7 @@ class GamepadController
                         gamepad.dpad_y = (report[i] >> (s+2)) & 0x3;
                     }
 
-                    CONWriteString(std::format("Gamepad state: Buttons {} Dpad {}.{}\r", gamepad.buttons.to_string(), gamepad.dpad_x, gamepad.dpad_y).c_str());
+                    //CONWriteString(std::format("Gamepad state: Buttons {} Dpad {}.{}\r", gamepad.buttons.to_string(), gamepad.dpad_x, gamepad.dpad_y).c_str());
 
                 }
             }
@@ -212,3 +237,5 @@ class GamepadController
     private:
         std::vector<Gamepad> gamepads;
 };
+
+extern GamepadController gamepad_controller;

@@ -76,7 +76,7 @@ static void usbProcessReport(uint8_t const *report) {
 //
 // ***************************************************************************************
 
-static GamepadController gamepad_controller;
+GamepadController gamepad_controller;
 
 void tuh_hid_mount_cb(uint8_t dev_addr, uint8_t instance, uint8_t const* desc_report, uint16_t desc_len) {
 	CONWriteString("Added USB device:");
@@ -200,7 +200,7 @@ void tuh_hid_report_received_cb(uint8_t dev_addr, uint8_t instance, uint8_t cons
 
 
 		// CONWrite('\r');
-		// sleep_ms(100);
+		//sleep_ms(10000);
 		gamepad_controller.update(dev_addr, instance, report, len);
 		tuh_hid_receive_report(dev_addr, instance);
 	}

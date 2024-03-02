@@ -12,6 +12,9 @@
 
 #include "common.h"
 #include "interface/kbdcodes.h"
+#include "hardware/gamepad_controller.h"
+
+extern GamepadController gamepad_controller;
 
 #define MAX_QUEUE_SIZE (64) 													// Max size of keyboard queue.
 #define MAX_FKEY_SIZE (48)   													// Max length of function key.
@@ -300,6 +303,8 @@ uint8_t KBDKeyboardController(void) {
 	if (keyboardState[22]|keyboardState[81]) ck |= 0x08; 						// S bit 3
 	if (keyboardState[18]) ck |= 0x10; 											// O bit 4
 	if (keyboardState[19]) ck |= 0x20; 											// P bit 5 
+
+	ck |= gamepad_controller.getState();
 	return ck;
 }
 
